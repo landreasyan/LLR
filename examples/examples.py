@@ -13,6 +13,8 @@ import networkx as nx
 import numpy as np
 import random
 import math
+import sys, os
+sys.path.append("..")
 from llr import LLR
 
 
@@ -71,22 +73,21 @@ for i in range(0, 240):
             W[i,j] = math.exp((-1)*np.linalg.norm(X_data[i]-X_data[j])**2/var**2);
 
 llr_g = LLR()
-print(var)
-regression_g = llr_g.fit(X_data[0:240], y_data[0:240], mu, v, var, Graph=W, perm_size=240)
+regression_g = llr_g.fit(X_data[0:240], y_data[0:240], mu, v, perm_size=100, var = var, Graph=W )
 Theta_g = regression_g.Theta
 Y_g = regression_g.Y
 Y_test_g = regression_g.predict(X[240:300])
 
 llr_no_g = LLR()
-regression_no_g = llr_no_g.fit(X_data[0:240], y_data[0:240], mu, v, var, Graph=None, perm_size=240)
+regression_no_g = llr_no_g.fit(X_data[0:240], y_data[0:240], mu, v, perm_size=50,  var = var, Graph=None)
 Theta_no_g = regression_no_g.Theta
 Y_no_g = regression_no_g.Y
 Y_test_no_g = regression_no_g.predict(X[240:300])
 
 diff_g = regression_g.W_small
 diff_no_g = regression_no_g.W_small
-W_no_g = regression_no_g.W
-
+W_asynm_no_g = regression_no_g.weight
+W_asym_g = regression_g.weight
 
 MSE_g = mean_squared_error(y_data[0:240], Y_g);
 MSE_no_g = mean_squared_error(y_data[0:240], Y_no_g);

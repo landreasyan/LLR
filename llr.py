@@ -27,8 +27,9 @@ class LLR():
         #A = np.zeros((perm_size, perm_size))
         D = np.zeros((perm_size, perm_size))
         D_inv = np.zeros((perm_size, perm_size))
-
+        self.perm_sorted = np.zeros(perm_size)
         self.perm = random.sample(range(0, len(X[:, 0])), perm_size)
+       # self.perm = [155, 202, 147, 178, 0, 212, 184, 119, 146, 2] 
         #q, r, self.perm = linalg.qr(np.matmul(G,self.W), pivoting=True)
         
         #Check for number of rows in X and W to match
@@ -47,12 +48,25 @@ class LLR():
                     if i != j:
                         W_small[i,j] = math.exp((-1)*np.linalg.norm(X[self.perm[i]]-self.X[self.perm[j]])**2/self.var**2); 
                         self.W_small = W_small
+                        
             # Find the degree of the columns of the reduced X matrix  
             for i in range(0, perm_size):
                 D[i,i] = np.sum(W_small[i,:]);
                 if D[i,i] == 0:
                     raise ValueError("Some vertices in the graph are not connected.")
                 D_inv[i,i] = 1/D[i,i];
+                
+            # pick the columns of W with biggest eigenvalues
+            for i in range(0, perm_size): 
+                E[:,i] = self.W[:, (self.perm[i])];
+            E = np.mat(E)
+            
+            # Keep only the choosed columns of X and their y values
+            X_new = self.X[self.perm[0], :]
+            y_new = y[self.perm[0]]
+            for i in range(1, perm_size):
+                X_new = np.block([[X_new], [self.X[self.perm[i], :]]])
+                y_new = np.block([[y_new],[y[self.perm[i]]]])   
 
         else: 
             self.W = Graph
@@ -77,10 +91,19 @@ class LLR():
                     self.perm = random.sample(range(0, len(X[:, 0])), perm_size)
                     pass
 
-        # pick the columns of W with biggest eigenvalues
-        for i in range(0, perm_size): 
-            E[:,i] = self.W[:, (self.perm[i])];
-        E = np.mat(E)
+            self.perm_sorted = self.perm
+            self.perm_sorted.sort()
+            # pick the columns of W with biggest eigenvalues
+            for i in range(0, perm_size): 
+                E[:,i] = self.W[:, (self.perm_sorted[i])];
+            E = np.mat(E)
+            
+            # Keep only the choosed columns of X and their y values
+            X_new = self.X[int(self.perm_sorted[0]), :]
+            y_new = y[int(self.perm_sorted[0])]
+            for i in range(1, perm_size):
+                X_new = np.block([[X_new], [self.X[int(self.perm_sorted[i]), :]]])
+                y_new = np.block([[y_new],[y[int(self.perm_sorted[i])]]])   
 
         # Compute the degrees of the choosen columns 
         for i in range(0, len(X[:, 0])):
@@ -105,12 +128,7 @@ class LLR():
         # Compute the Laplacian matrix of reduced X matrix
         L = np.subtract(np.identity(perm_size), np.matmul(D_inv, W_small))
         self.L = L
-        # Keep only the choosed columns of X and their y values
-        X_new = self.X[self.perm[0], :]
-        y_new = y[self.perm[0]]
-        for i in range(1, perm_size):
-            X_new = np.block([[X_new], [self.X[self.perm[i], :]]])
-            y_new = np.block([[y_new],[y[self.perm[i]]]])   
+        
 
         # Constructing X_block matrix of smaller X
         self.X_block = np.identity(perm_size)
