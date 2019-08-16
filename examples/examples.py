@@ -23,7 +23,7 @@ n_samples = 100
 mu = 1
 v = 1
 weight_limit = 0
-
+size = 240
 
 n_samples = 100
 #beta [0 1]
@@ -63,42 +63,49 @@ plt.show()
 
 p = len(X_data[0,:])
 n = len(X_data[:,0])
-x = np.arange(0,240,1)
+x = np.arange(0,size,1)
 Theta = np.zeros(3*n)
-W = np.zeros((240, 240))
-
-for i in range(0, 240):
-    for j in range(0, 240):
+W = np.zeros((size, size))
+W_predict = np.zeros((60, size))
+for i in range(0, size):
+    for j in range(0, size):
         if i != j:
             W[i,j] = math.exp((-1)*np.linalg.norm(X_data[i]-X_data[j])**2/var**2);
 
 llr_g = LLR()
-regression_g = llr_g.fit(X_data[0:240], y_data[0:240], mu, v, perm_size=100, var = var, Graph=W )
+regression_g = llr_g.fit(X_data[0:size], y_data[0:size], mu, v, perm_size=100, var = var, Graph=W )
 Theta_g = regression_g.Theta
 Y_g = regression_g.Y
-Y_test_g = regression_g.predict(X[240:300])
+
+for i in range(240, 300):
+    for j in range(0, size):
+        W_predict[i-240,j] = math.exp((-1)*np.linalg.norm(X[i]-X[j])**2/var**2); 
+                  
+Y_test_g = regression_g.predict(X[240:300], W_predict)
 
 llr_no_g = LLR()
-regression_no_g = llr_no_g.fit(X_data[0:240], y_data[0:240], mu, v, perm_size=50,  var = var, Graph=None)
+regression_no_g = llr_no_g.fit(X_data[0:size], y_data[0:size], mu, v, perm_size=100,  var = var, Graph=None)
 Theta_no_g = regression_no_g.Theta
 Y_no_g = regression_no_g.Y
 Y_test_no_g = regression_no_g.predict(X[240:300])
+row_storchastic = W_predict/W_predict.sum(axis=1)[:,None]
 
+test_entry  = math.exp((-1)*np.linalg.norm(X_data[5]-X_data[4])**2/var**2);
 diff_g = regression_g.W_small
 diff_no_g = regression_no_g.W_small
 W_asynm_no_g = regression_no_g.weight
 W_asym_g = regression_g.weight
 
-MSE_g = mean_squared_error(y_data[0:240], Y_g);
-MSE_no_g = mean_squared_error(y_data[0:240], Y_no_g);
+MSE_g = mean_squared_error(y_data[0:size], Y_g);
+MSE_no_g = mean_squared_error(y_data[0:size], Y_no_g);
 MSE_test_g = mean_squared_error(y_data[240:300], Y_test_g);
 MSE_test_no_g = mean_squared_error(y_data[240:300], Y_test_no_g);
 print("MSE fit G =", MSE_g)
 print("MSE fit without G =", MSE_no_g)
 print("MSE predict G = ", MSE_test_g)
 print("MSE predict without G = ", MSE_test_no_g)
-plt.figure()
-plt.scatter(y_data[0:240], Y_g)
+#plt.figure()
+#plt.scatter(y_data[0:240], Y_g)
 
-plt.show() 
+#plt.show() 
 

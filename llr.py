@@ -29,10 +29,8 @@ class LLR():
         D_inv = np.zeros((perm_size, perm_size))
         self.perm_sorted = np.zeros(perm_size)
         self.perm = random.sample(range(0, len(X[:, 0])), perm_size)
-       # self.perm = [155, 202, 147, 178, 0, 212, 184, 119, 146, 2] 
+
         #q, r, self.perm = linalg.qr(np.matmul(G,self.W), pivoting=True)
-        
-        #Check for number of rows in X and W to match
         
         if Graph is None: 
             # Compute the weight matrix of X
@@ -69,15 +67,23 @@ class LLR():
                 y_new = np.block([[y_new],[y[self.perm[i]]]])   
 
         else: 
+            #Check for number of rows in X and Graph to match
+            if X.shape[0] != Graph.shape[0]:
+                raise ValueError("The dimensions of the data set and the graph don't match.")
+                
+            self.mode = 'Graph'
             self.W = Graph
-            W_graph = nx.from_numpy_matrix(self.W, parallel_edges=False, create_using=nx.Graph)
+            #W_graph = nx.from_numpy_matrix(self.W, parallel_edges=False, create_using=nx.Graph)
             while(1):
                 try:
-                    W_small_graph = W_graph.subgraph(self.perm[0:perm_size])
-                    W_small = nx.adjacency_matrix(W_small_graph)
-                    W_small = W_small.todense()
+                    #W_small_graph = W_graph.subgraph(self.perm)
+                    #W_small = nx.adjacency_matrix(W_small_graph)
+                    #W_small = W_small.todense()
+                    
+                    for i in range(0, perm_size):
+                        for j in range(0, perm_size):
+                            W_small[i,j] = self.W[self.perm[i], self.perm[j]]
                     self.W_small = W_small
-                    print('here again')
                     # Find the degree of the columns of the reduced X matrix  
                     for i in range(0, perm_size):
                         D[i,i] = np.sum(W_small[i,:]);
@@ -90,20 +96,35 @@ class LLR():
                     print("here")
                     self.perm = random.sample(range(0, len(X[:, 0])), perm_size)
                     pass
-
-            self.perm_sorted = self.perm
-            self.perm_sorted.sort()
-            # pick the columns of W with biggest eigenvalues
-            for i in range(0, perm_size): 
-                E[:,i] = self.W[:, (self.perm_sorted[i])];
-            E = np.mat(E)
+        
+            if (W_small[0, 1] == self.W[self.perm[0], self.perm[1]]) and (W_small[0, 2] == self.W[self.perm[0], self.perm[2]]) :
+                # pick the columns of W with biggest eigenvalues
+                for i in range(0, perm_size): 
+                    E[:,i] = self.W[:, (self.perm[i])];
+                E = np.mat(E)
+                
+                # Keep only the choosed columns of X and their y values
+                X_new = self.X[self.perm[0], :]
+                y_new = y[self.perm[0]]
+                for i in range(1, perm_size):
+                    X_new = np.block([[X_new], [self.X[self.perm[i], :]]])
+                    y_new = np.block([[y_new],[y[self.perm[i]]]])   
+            else: 
+                self.perm_sorted = self.perm
+                self.perm_sorted.sort()
+                # pick the columns of W with biggest eigenvalues
+                for i in range(0, perm_size): 
+                    E[:,i] = self.W[:, (self.perm_sorted[i])];
+                E = np.mat(E)
             
-            # Keep only the choosed columns of X and their y values
-            X_new = self.X[int(self.perm_sorted[0]), :]
-            y_new = y[int(self.perm_sorted[0])]
-            for i in range(1, perm_size):
-                X_new = np.block([[X_new], [self.X[int(self.perm_sorted[i]), :]]])
-                y_new = np.block([[y_new],[y[int(self.perm_sorted[i])]]])   
+                # Keep only the choosed columns of X and their y values
+                X_new = self.X[int(self.perm_sorted[0]), :]
+                y_new = y[int(self.perm_sorted[0])]
+                for i in range(1, perm_size):
+                    X_new = np.block([[X_new], [self.X[int(self.perm_sorted[i]), :]]])
+                    y_new = np.block([[y_new],[y[int(self.perm_sorted[i])]]]) 
+                print("permuted")
+                
 
         # Compute the degrees of the choosen columns 
         for i in range(0, len(X[:, 0])):
@@ -176,25 +197,49 @@ class LLR():
             #self.Y[i] = Theta[i,0] + Theta[i+n, 0]*X[i,0]+Theta[i+2*n,0]*X[i,1]
         return self
     
-    def predict(self, X_new):
-        
+    def predict(self, X_new, Graph = None):
         # Prediction vector
         Y = np.zeros(len(X_new[:,0]))
-        
+            
         # Asymmetric weight vector 
         W_predict = np.zeros((len(X_new[:,0]), self.perm_size))
         
-        # Find the distance between the new X values and X values in the model 
-        for i in range(0, len(X_new[:,0])):
-            for j in range(0, self.perm_size):
-                W_predict[i,j] = math.exp((-1)*np.linalg.norm(X_new[i]-self.X[self.perm[j]])**2/self.var**2); 
-              
-        # Normalize the weight matrix
-        for i in range(0, len(W_predict[:, 0])):
-            d = np.sum(W_predict[i,:]);
-            if d == 0:
-                raise ValueError("Some vertices in the graph are not connected.")
-            W_predict[i,:] = W_predict[i,:]/d;
+        if self.mode is 'Graph':
+            #Check for number of rows in X and Graph to match
+            if X_new.shape[0] != Graph.shape[0]:
+                raise ValueError("The dimensions of the data set and the graph don't match.")
+                
+            for i in range(0, X_new.shape[0]):
+                for j in range(0, self.perm_size):
+                    W_predict[i, j] = Graph[i, self.perm[j]]
+            
+            while(1):
+                row_storchastic = W_predict/W_predict.sum(axis=1)[:,None]
+                try:
+                    # Normalize the weight matrix
+                    for i in range(0, len(W_predict[:, 0])):
+                        d = np.sum(W_predict[i,:]);
+                        if d == 0:
+                            raise ValueError("Some vertices in the graph are not connected.")
+                        W_predict[i,:] = W_predict[i,:]/d;
+                        
+                    break
+                except: 
+                    W_predict = W_predict*row_storchastic
+                    pass
+            
+        else: 
+            # Find the distance between the new X values and X values in the model 
+            for i in range(0, len(X_new[:,0])):
+                for j in range(0, self.perm_size):
+                    W_predict[i,j] = math.exp((-1)*np.linalg.norm(X_new[i]-self.X[self.perm[j]])**2/self.var**2); 
+                  
+            # Normalize the weight matrix
+            for i in range(0, len(W_predict[:, 0])):
+                d = np.sum(W_predict[i,:]);
+                if d == 0:
+                    raise ValueError("Some vertices in the graph are not connected.")
+                W_predict[i,:] = W_predict[i,:]/d;
             
         size = self.perm_size
         p = len(self.X[0,:])

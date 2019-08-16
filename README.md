@@ -69,6 +69,9 @@ Returns the predicted values of the response variable as a 1-d array.
 &nbsp;&nbsp;&nbsp;&nbsp; **X_new**: *array_like*
 &nbsp;&nbsp;&nbsp;&nbsp; New array of data points, with m observations and p features. 
 
+&nbsp;&nbsp;&nbsp;&nbsp; **Graph**: *array_like*
+&nbsp;&nbsp;&nbsp;&nbsp; Graph of the data points in X_new passed as an adjacency matrix. 
+
 
 ## Running the examples
 
